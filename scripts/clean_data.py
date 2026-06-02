@@ -25,6 +25,7 @@ def eksik_raporu(df):
     })
     return rapor[rapor["Eksik Sayı"] > 0].sort_values("Oran (%)", ascending=False)
 
+
 def clean_products(df: pd.DataFrame) -> pd.DataFrame:
     """Veri setini temizler."""
     
