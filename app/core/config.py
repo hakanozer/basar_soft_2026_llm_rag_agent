@@ -37,4 +37,9 @@ class Config:
     LOGSTASH_HOST = os.getenv("LOGSTASH_HOST", "localhost")
     LOGSTASH_PORT = int(os.getenv("LOGSTASH_PORT", 5514))
     
+    # QDrand Vector DB Configuration
+    QDRAND_URL = os.getenv("QDRAND_URL", "localhost")
+    QDRAND_COLLECTION = os.getenv("QDRAND_COLLECTION", "products")
+    QDRAND_PORT = int(os.getenv("QDRAND_PORT", 6333))
+    
 config = Config()    

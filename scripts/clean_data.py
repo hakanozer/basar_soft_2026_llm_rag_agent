@@ -101,6 +101,9 @@ def clean_products(df: pd.DataFrame) -> pd.DataFrame:
     
     eksik_raporu_df = eksik_raporu(df)
     print("Eksik Değer Raporu:\n", eksik_raporu_df)
+    
+    # id değerlerini tam sayı yap
+    df["id"] = df["id"].apply(lambda x: int(x) if isinstance(x, float) and x.is_integer() else x)
     return df
 
 

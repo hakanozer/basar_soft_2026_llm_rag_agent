@@ -1,15 +1,15 @@
 # fastapi ile API rotaları tanımlamak için kullanılan bir modül
-from fastapi import APIRouter, Request
-from app.core.config import config
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Request
 import httpx
+from pydantic import BaseModel
+
+from app.llm.intent_detector import intent_detector
+from app.llm.ollama_client import ollama_client
 
 # Request ve Response Şemaları
 class ChatRequest(BaseModel):
     prompt: str
 
-class ChatResponse(BaseModel):
-    response: str
 
 router = APIRouter()
 
@@ -17,21 +17,13 @@ router = APIRouter()
 # chat içerisine { "prompt": "Fenerbahçe ne zaman şampiyon olur" } şeklinde bir json datası geliyor.
 @router.get("/chat")
 async def chat(request: ChatRequest):
-    url =  f"{config.OLLAMA_BASE_URL}/api/generate"
-    payload: dict = {
-            "model": config.OLLAMA_MODEL,
-            "prompt": request.prompt,
-            "stream": False,
-            "options": {
-                "temperature": 0.7,
-                "num_predict": 512,    # Maksimum üretilecek token sayısı
-                "top_p": 0.9,
-                "top_k": 40,
-            },
-        }
-    payload["system"] = "Türkçe olarak, kısa ve öz bir şekilde yanıt ver."
-    client = httpx.AsyncClient(timeout=120.0)
-    response = await client.post(url, json=payload)
-    response.raise_for_status()
-    data = response.json()
-    return ChatResponse(response=data.get("response", ""))
+        try:
+            result = await intent_detector.detect(request.prompt)
+            return result
+        except httpx.ConnectError:
+            raise HTTPException(
+                status_code=503,
+                detail="LLM servisi (Ollama) çalışmıyor. 'ollama serve' komutunu çalıştırın.",
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
