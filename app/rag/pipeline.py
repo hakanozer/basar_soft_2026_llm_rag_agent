@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+import pandas as pd
 from qdrant_client import qdrant_client
 
 from app.db.models import ProductDBModel
@@ -16,6 +17,7 @@ class RAGResponse:
     intent: IntentResult
     products: list[ProductDBModel]
     total_found: int
+    answer_time_ms: int = field(default=0)
     
 RAG_SYSTEM_PROMPT = """Kullanıcıya Türkçe yanıt ver, Sen AI Commerce Assistant'sın. Bir e-ticaret platformunun akıllı asistanısın.
 Sana kullanıcının sorusu ve veritabanından bulunan ürün bilgileri verilecek.
@@ -32,6 +34,8 @@ class RAGPipeline:
         top_k: int = 5,
     ) -> RAGResponse:
         """RAG pipeline'ını çalıştırır."""
+        # start time
+        startTime = pd.Timestamp.now()
         
         # Adım 1: Intent detection
         intent_result = await intent_detector.detect(query)
@@ -58,12 +62,15 @@ class RAGPipeline:
             intent=intent_result,
         )
         
+        endTime = pd.Timestamp.now()
+        answer_time_ms = int((endTime - startTime).total_seconds() * 1000)
         # Yanıtı RAGResponse formatında döndür
         return RAGResponse(
             answer=answer,
             intent=intent_result,
             products=products,
             total_found=len(retrieved_products),
+            answer_time_ms=answer_time_ms,
         )
         
     async def _generate_answer(

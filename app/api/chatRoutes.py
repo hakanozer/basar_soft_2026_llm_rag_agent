@@ -12,11 +12,11 @@ class ChatRequest(BaseModel):
     prompt: str
 
 
-router = APIRouter()
+chatRoutes = APIRouter()
 
 # chat endpoint'i, Ollama API'sine istek yaparak yanıt döndürüyor
 # chat içerisine { "prompt": "Fenerbahçe ne zaman şampiyon olur" } şeklinde bir json datası geliyor.
-@router.get("/chat")
+@chatRoutes.get("/chat")
 async def chat(request: ChatRequest):
     rag_query = await rag_pipeline.rag_pipeline.run(request.prompt)
-    return {"response": rag_query}
+    return rag_query
