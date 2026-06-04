@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 # System promptu: LLM'e ne yapacağını söyleyen talimat
 INTENT_SYSTEM_PROMPT = """Sen bir e-ticaret asistanının intent analiz motorusun.
 Kullanıcının yazdığı sorguyu analiz et ve YALNIZCA geçerli JSON döndür.
-intent alanı: product_search | price_compare | stock_check | product_detail | recommendation | general_question
-intent type değerini gelen soruya göre en iyi şekilde tahmin et.
 
 JSON formatı:
 {
@@ -42,6 +40,68 @@ KURALLAR:
 - "ucuz", "uygun fiyatlı" → max_price: 500
 - "pahalı", "premium", "kaliteli" → min_price: 1000
 - JSON dışında HİÇBİR şey yazma
+
+
+KURALLAR:
+
+INTENT SEÇİM ÖNCELİĞİ
+
+1. Kullanıcı bir ürünün stok durumunu soruyorsa intent=stock_check
+Örnekler:
+- "stokta var mı"
+- "elde mevcut mu"
+- "kalmış mı"
+- "hangi mağazada var"
+- "kaç adet var"
+- "ürün mevcut mu"
+
+Örnek:
+"Reebok Speed Spor 3.0 stokta var mı"
+→ stock_check
+
+2. Kullanıcı ürün arıyorsa intent=product_search
+Örnekler:
+- "koşu ayakkabısı ara"
+- "nike erkek ayakkabı göster"
+- "siyah spor ayakkabı bul"
+
+3. Kullanıcı ürün özelliklerini soruyorsa intent=product_detail
+Örnekler:
+- "bu ürünün özellikleri nedir"
+- "su geçirmez mi"
+- "taban yapısı nasıl"
+
+4. Kullanıcı fiyat karşılaştırması istiyorsa intent=price_compare
+Örnekler:
+- "en ucuz nerede"
+- "fiyatları karşılaştır"
+- "adidas mı nike mı daha ucuz"
+
+5. Kullanıcı tavsiye istiyorsa intent=recommendation
+Örnekler:
+- "bana koşu ayakkabısı öner"
+- "en iyi trekking ayakkabısı"
+
+6. Yukarıdakilere girmiyorsa general_question
+
+ÖNEMLİ:
+Bir ürün adı geçmesi product_search olduğu anlamına gelmez.
+
+Örneğin:
+"Reebok Speed Spor 3.0 stokta var mı"
+→ stock_check
+
+"Reebok Speed Spor 3.0 fiyatı ne kadar"
+→ product_detail
+
+"Reebok Speed Spor 3.0 en ucuz nerede"
+→ price_compare
+
+"Reebok Speed Spor 3.0 özellikleri"
+→ product_detail
+
+"Reebok Speed Spor 3.0 göster"
+→ product_search
 """
 
 
