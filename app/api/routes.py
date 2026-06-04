@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, Request
 import httpx
 from pydantic import BaseModel
+import app.rag.pipeline as rag_pipeline
 
 from app.llm.intent_detector import intent_detector
 from app.llm.ollama_client import ollama_client
@@ -17,13 +18,5 @@ router = APIRouter()
 # chat içerisine { "prompt": "Fenerbahçe ne zaman şampiyon olur" } şeklinde bir json datası geliyor.
 @router.get("/chat")
 async def chat(request: ChatRequest):
-        try:
-            result = await intent_detector.detect(request.prompt)
-            return result
-        except httpx.ConnectError:
-            raise HTTPException(
-                status_code=503,
-                detail="LLM servisi (Ollama) çalışmıyor. 'ollama serve' komutunu çalıştırın.",
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    rag_query = await rag_pipeline.rag_pipeline.run(request.prompt)
+    return {"response": rag_query}

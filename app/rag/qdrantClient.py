@@ -6,6 +6,10 @@
 import os
 import sys
 
+import logging  # Uygulama loglama
+
+logger = logging.getLogger(__name__)
+
 try:
     from app.core.config import config
 except ModuleNotFoundError:
@@ -113,19 +117,44 @@ class QdrantClientWrapper:
             ]
         )
 
-    def search_products(self, query_embedding, top_k=5):
-        # Sorgu embedding'i ile benzer ürünleri arama
-        results = self.qDrantClient.search(
+    def search(self, query_text: str, top_k: int = 5, score_threshold: float = 0.3):
+        # Get query embedding and convert to plain Python list (Qdrant expects JSON-serializable vectors)
+        query_vector = self.get_embedding(query_text)
+        try:
+            qvec = query_vector.tolist()
+        except Exception:
+            # if it's already a list
+            qvec = list(query_vector)
+        hits = self.qDrantClient.search(
             collection_name=self.collection_name,
-            query_vector=query_embedding,
-            limit=top_k
+            query_vector=qvec,
+            limit=top_k,
+            with_payload=True,
+            score_threshold=score_threshold,
         )
+        results = []
+        for hit in hits:
+            meta = hit.payload.copy() if hit.payload is not None else {}
+            # normalize types
+            if "price" in meta:
+                try:
+                    meta["price"] = float(meta["price"])
+                except Exception:
+                    pass
+
+            meta["score"] = float(hit.score)
+            meta["id"] = hit.id
+            meta["product_id"] = str(hit.id)
+            results.append(meta)  
         return results
     
     
     # main
 if __name__ == "__main__":
     """QDrantClient sınıfını test etmek için doğrudan çalıştırılabilir."""
-    # qdrant_client = QdrantClientWrapper()
+    qdrant_client = QdrantClientWrapper()
     # qdrant_client.create_collection()
     # qdrant_client.load_products_from_csv()
+    #list = qdrant_client.search("sağlam dağcılık için spor ayakkabı")
+    #for item in list:
+    # print(item)

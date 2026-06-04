@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 # System promptu: LLM'e ne yapacağını söyleyen talimat
 INTENT_SYSTEM_PROMPT = """Sen bir e-ticaret asistanının intent analiz motorusun.
 Kullanıcının yazdığı sorguyu analiz et ve YALNIZCA geçerli JSON döndür.
+intent alanı: product_search | price_compare | stock_check | product_detail | recommendation | general_question
+intent type değerini gelen soruya göre en iyi şekilde tahmin et.
 
 JSON formatı:
 {
