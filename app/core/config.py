@@ -29,7 +29,7 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://aicommerce:changeme123@localhost:5432/aicommerce_db")
     
     # Cache (Redis)
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
     

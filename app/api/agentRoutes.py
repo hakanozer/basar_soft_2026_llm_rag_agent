@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List
 from collections import defaultdict
 
 from app.agent.planner import commerce_agent
+from app.core.rate_limit import RateLimiter
 
 agentRoutes = APIRouter()
 
@@ -36,8 +37,12 @@ def build_chat_history_string(history: List[dict]) -> str:
         lines.append(f"{role}: {msg['content']}")
     return "\n".join(lines)
 
+rate_limit = RateLimiter(
+    max_requests=3,
+    window_seconds=60
+)
 
-@agentRoutes.post("/agent", response_model=ChatResponse)
+@agentRoutes.post("/agent", response_model=ChatResponse, dependencies=[Depends(rate_limit)])
 async def chat(request: ChatRequest):
     user_id = request.user_id
 
