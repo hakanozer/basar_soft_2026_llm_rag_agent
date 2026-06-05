@@ -115,20 +115,20 @@ class CommerceAgent:
 
         return "product_search"  # varsayılan
 
-    def _run_tool(self, intent: str, message: str) -> str:
+    async def _run_tool(self, intent: str, message: str) -> str:
         """Tespit edilen intent'e göre tool'u çalıştırır."""
         tool_fn = TOOL_MAP.get(intent)
         if tool_fn is None:
             return ""
 
         try:
-            # LangChain tool'ları .invoke() ile çağrılır
-            return tool_fn.invoke(message)
+            # LangChain tool'ları .ainvoke() ile çağrılır
+            return await tool_fn.ainvoke(message)
         except Exception as e:
             logger.exception("Tool hatası (%s): %s", intent, e)
             return "Araç çalıştırılamadı."
 
-    def _generate_answer(
+    async def _generate_answer(
         self,
         user_input: str,
         tool_result: str,
@@ -168,10 +168,10 @@ class CommerceAgent:
             return AgentResponse(answer=answer)
 
         # 3. Tool çalıştır
-        tool_result = self._run_tool(intent, user_input)
+        tool_result = await self._run_tool(intent, user_input)
 
         # 4. Tool sonucunu LLM ile formatla
-        answer = self._generate_answer(user_input, tool_result, chat_history)
+        answer = await self._generate_answer(user_input, tool_result, chat_history)
 
         return AgentResponse(
             answer=answer,

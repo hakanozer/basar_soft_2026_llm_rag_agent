@@ -2,6 +2,7 @@
 
 from langchain_community.tools import tool
 
+from app.db.session import get_product_by_id
 from app.rag.qdrantClient import QdrantClientWrapper
 
 
@@ -81,7 +82,7 @@ def stock_check(query: str) -> str:
     return response
 
 @tool
-def product_detail(query: str) -> str:
+async def product_detail(query: str) -> str:
     """Kullanıcının istediği ürünlerin detaylarını gösterir."""
     print(f"Product detail query: {query}")
     # QDrant üzerinden benzer ürünleri getir
@@ -97,10 +98,28 @@ def product_detail(query: str) -> str:
     # Ürün detaylarını göster
     response = "Ürün detayları:\n\n"
     for prod in retrieved_products:
+        proDB = await get_product_by_id(prod["id"])
+        print(f"Product detail - DB query result for ID {prod['id']}: name = {proDB.name}")
+        if proDB is None:
+            continue
         response += (
-            f"Ürün: {prod['name']}\n"
-            f"Fiyat: {prod['price']} TL\n"
-            f"Detay: {prod['description']}\n"
+            f"Ürün ID: {proDB.id}\n"
+            f"Ürün Adı: {proDB.name}\n"
+            f"Marka: {proDB.brand}\n"
+            f"Kategori: {proDB.category}\n"
+            f"Açıklama: {proDB.description}\n"
+            f"Fiyat: {proDB.price} TL\n"
+            f"Orijinal Fiyat: {proDB.original_price} TL\n"
+            f"Stok Miktarı: {proDB.stock_quantity}\n"
+            f"Cinsiyet: {proDB.gender}\n"
+            f"Sezon: {proDB.season}\n"
+            f"Renk: {proDB.color}\n"
+            f"Bedenler: {proDB.sizes}\n"
+            f"Özellikler: {proDB.features}\n"
+            f"Puan: {proDB.rating}\n"
+            f"Yorum Sayısı: {proDB.review_count}\n"
+            f"Aktif Mi: {'Evet' if proDB.is_active else 'Hayır'}\n"
+            f"İndirim Oranı: {proDB.discount_rate}%\n"
             f"---\n"
         )
     return response
