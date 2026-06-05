@@ -1,24 +1,17 @@
-# fastapi ile API rotaları tanımlamak için kullanılan bir modül
-from fastapi import APIRouter, HTTPException, Request
-import httpx
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import app.rag.pipeline as rag_pipeline
-
-from app.llm.intent_detector import intent_detector
-from app.llm.ollama_client import ollama_client
-
-from app.agent.planner import commerce_agent
-
 from typing import Dict, List
 from collections import defaultdict
 
+from app.agent.planner import commerce_agent
 
 agentRoutes = APIRouter()
 
-# Her kullanıcı için sohbet geçmişi
+# Kullanıcı bazlı sohbet geçmişi — TEK kaynak (planner'daki memory kaldırıldı)
 conversation_history: Dict[str, List[dict]] = defaultdict(list)
 
-MAX_HISTORY = 12  # Her kullanıcı için maksimum sohbet geçmişi sayısı
+MAX_HISTORY = 10  # Son 10 mesaj (5 tur)
+
 
 class ChatRequest(BaseModel):
     user_id: str
@@ -30,69 +23,62 @@ class ChatResponse(BaseModel):
     user_id: str = None
 
 
-async def run_agent(messages: List[dict]) -> str:
+def build_chat_history_string(history: List[dict]) -> str:
     """
-    Buraya kendi commerce_agent entegrasyonunu koy.
+    Geçmiş mesajları agent'ın okuyabileceği string formatına çevirir.
     """
-    prompt = "\n".join(
-        [
-            f"{m['role']}: {m['content']}"
-            for m in messages
-        ]
-    )
-    response = await commerce_agent.run(prompt)
-    return response.answer
-
+    if not history:
+        return "Henüz sohbet geçmişi yok."
+    
+    lines = []
+    for msg in history:
+        role = "Kullanıcı" if msg["role"] == "user" else "Asistan"
+        lines.append(f"{role}: {msg['content']}")
+    return "\n".join(lines)
 
 
 @agentRoutes.post("/agent", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-
     user_id = request.user_id
 
-    # Kullanıcı mesajını geçmişe ekle
-    conversation_history[user_id].append(
-        {
-            "role": "user",
-            "content": request.message
-        }
-    )
-
-    # Son N mesajı gönder
+    # Geçmiş mesajları al (son mesajı eklemeden önce)
     history = conversation_history[user_id][-MAX_HISTORY:]
+    chat_history_str = build_chat_history_string(history)
 
-    answer = await run_agent(history)
-
-    # Agent cevabını hafızaya ekle
-    conversation_history[user_id].append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
+    # Agent'ı çalıştır
+    response = await commerce_agent.run(
+        user_input=request.message,
+        chat_history=chat_history_str,
     )
-    # historyi yazdır
-    print(f"User {user_id} history:")
-    for msg in conversation_history[user_id]:
-        print(f"  {msg['role']}: {msg['content']}")
-        
-    return ChatResponse(prompt=answer, user_id=user_id)
+
+    # Kullanıcı mesajını kaydet
+    conversation_history[user_id].append({
+        "role": "user",
+        "content": request.message,
+    })
+
+    # Agent cevabını kaydet
+    conversation_history[user_id].append({
+        "role": "assistant",
+        "content": response.answer,
+    })
+
+    # MAX_HISTORY'yi aş geçince eski mesajları sil
+    if len(conversation_history[user_id]) > MAX_HISTORY * 2:
+        conversation_history[user_id] = conversation_history[user_id][-MAX_HISTORY:]
+
+    return ChatResponse(prompt=response.answer, user_id=user_id)
 
 
 @agentRoutes.delete("/agent/{user_id}")
 async def clear_chat(user_id: str):
-
-    if user_id in conversation_history:
-        del conversation_history[user_id]
-
-    return {
-        "success": True
-    }
+    conversation_history.pop(user_id, None)
+    return {"success": True}
 
 
 @agentRoutes.get("/agent/{user_id}")
 async def get_history(user_id: str):
-
     return {
         "user_id": user_id,
-        "history": conversation_history.get(user_id, [])
+        "history": conversation_history.get(user_id, []),
     }
