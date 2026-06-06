@@ -8,6 +8,7 @@ from app.core.logging_config import setup_logging
 
 from .api.agentRoutes import agentRoutes
 from .api.chatRoutes import chatRoutes
+from .api.mlRouters import mlRoutes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,3 +22,4 @@ app = FastAPI(lifespan=lifespan)
 # api bağlantılarına api/v1 prefix'i eklemek için router'ı uygulamaya dahil ediyoruz
 app.include_router(chatRoutes, prefix="/api/v1")
 app.include_router(agentRoutes, prefix="/api/v1")
+app.include_router(mlRoutes, prefix="/api/v1")
