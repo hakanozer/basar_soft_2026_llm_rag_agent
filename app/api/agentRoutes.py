@@ -3,8 +3,15 @@ from pydantic import BaseModel
 from typing import Dict, List
 from collections import defaultdict
 
+from google import genai
+
+import structlog
+
 from app.agent.planner import commerce_agent
+from app.core.config import config
 from app.core.rate_limit import RateLimiter
+
+logger = structlog.get_logger(__name__)
 
 agentRoutes = APIRouter()
 
@@ -42,9 +49,42 @@ rate_limit = RateLimiter(
     window_seconds=60
 )
 
+
+client = genai.Client(api_key=config.GEMINI_API_KEY)
+
 @agentRoutes.post("/agent", response_model=ChatResponse, dependencies=[Depends(rate_limit)])
 async def chat(request: ChatRequest):
     user_id = request.user_id
+    
+    logger.info("agent_request_received", user_id=user_id, message=request.message)
+    
+    rewrite_prompt = f"""
+    Sen bir e-ticaret sisteminde çalışan sorgu sadeleştiricisisin.
+
+    GÖREVİN:
+
+    - Kullanıcının yazım hatalarını düzelt.
+    - Gereksiz kelimeleri kaldır.
+    - Ürün adlarını koru.
+    - Marka adlarını koru.
+    - Kullanıcının amacını netleştir.
+    - Cevap verme.
+    - Açıklama yapma.
+    - Olması gereken formatta sadece optimize edilmiş sorguyu döndür.
+
+    Kullanıcı:
+    {request.message}
+
+    Çıktı:
+    """
+    
+    geminiResponse = client.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=rewrite_prompt
+    )
+    
+    logger.info("optimized_query_generated", user_id=user_id, optimized_query=geminiResponse.text.strip())
+    
 
     # Geçmiş mesajları al (son mesajı eklemeden önce)
     history = conversation_history[user_id][-MAX_HISTORY:]
@@ -52,14 +92,14 @@ async def chat(request: ChatRequest):
 
     # Agent'ı çalıştır
     response = await commerce_agent.run(
-        user_input=request.message,
+        user_input=geminiResponse.text.strip(),
         chat_history=chat_history_str,
     )
 
     # Kullanıcı mesajını kaydet
     conversation_history[user_id].append({
         "role": "user",
-        "content": request.message,
+        "content": response.answer,
     })
 
     # Agent cevabını kaydet
@@ -67,6 +107,8 @@ async def chat(request: ChatRequest):
         "role": "assistant",
         "content": response.answer,
     })
+
+    logger.info("agent_response_sent", user_id=user_id, response=response.answer)
 
     # MAX_HISTORY'yi aş geçince eski mesajları sil
     if len(conversation_history[user_id]) > MAX_HISTORY * 2:

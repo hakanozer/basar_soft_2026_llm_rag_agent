@@ -42,4 +42,7 @@ class Config:
     QDRAND_COLLECTION = os.getenv("QDRAND_COLLECTION", "products")
     QDRAND_PORT = int(os.getenv("QDRAND_PORT", 6333))
     
+    # Gemini API Configuration
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    
 config = Config()    

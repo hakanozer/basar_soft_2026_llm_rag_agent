@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.cache import cache
+from app.core.logging_config import setup_logging
 
 from .api.agentRoutes import agentRoutes
 from .api.chatRoutes import chatRoutes
@@ -14,6 +15,7 @@ async def lifespan(app: FastAPI):
     yield
     await cache.disconnect()
 
+setup_logging()  # Logging konfigürasyonunu başlat
 app = FastAPI(lifespan=lifespan)
 
 # api bağlantılarına api/v1 prefix'i eklemek için router'ı uygulamaya dahil ediyoruz
