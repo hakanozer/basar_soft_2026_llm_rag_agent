@@ -25,4 +25,4 @@ async def predict_top_cities(top_n: int = 5):
         return result.to_dict(orient="records")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))    
+        raise HTTPException(status_code=500, detail=str(e))
